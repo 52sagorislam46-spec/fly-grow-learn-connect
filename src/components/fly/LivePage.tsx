@@ -250,7 +250,7 @@ function VideoTile({ stream, mirrored, muted, label }: { stream: MediaStream | n
   }, [stream, muted]);
   return (
     <div className="relative flex-1 min-h-0 bg-gray-900 overflow-hidden">
-      <video ref={ref} autoPlay playsInline muted={muted} className={`w-full h-full object-cover ${mirrored ? "-scale-x-100" : ""}`} />
+      <video ref={ref} autoPlay playsInline muted={muted} className={`w-full h-full object-contain ${mirrored ? "-scale-x-100" : ""}`} />
       {!stream && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 gap-2">
           <Loader2 className="animate-spin" />
@@ -439,11 +439,19 @@ function LiveRoom({ liveId, onClose }: { liveId: string; onClose: () => void }) 
     let stopped = false;
     let stream: MediaStream | null = null;
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 } }, audio: { echoCancellation: true, noiseSuppression: true } })
+      // No forced portrait size: phones crop (zoom in) the sensor to fit it.
+      .getUserMedia({ video: { facingMode: facing }, audio: { echoCancellation: true, noiseSuppression: true } })
       .then((s) => {
         if (stopped) return s.getTracks().forEach((t) => t.stop());
         stream = s;
         s.getAudioTracks().forEach((t) => (t.enabled = micOn));
+        // Reset camera zoom to the widest view when the device supports it.
+        s.getVideoTracks().forEach((t) => {
+          const caps = (t.getCapabilities?.() ?? {}) as { zoom?: { min?: number } };
+          if (caps.zoom && typeof caps.zoom.min === "number") {
+            t.applyConstraints({ advanced: [{ zoom: caps.zoom.min } as MediaTrackConstraintSet] }).catch(() => {});
+          }
+        });
         setLocal(s);
       })
       .catch(() => {});
