@@ -1,0 +1,6 @@
+- [x] Remove automatic starter/demo star defaults without changing other features.
+- [x] Reset all 7 existing accounts' star, received/withdrawn star, and wallet balances once; verify zero values and preserve other fields.
+- [x] Verify zero-starter test, successful build, and error-free sign-in preview; wallet UI requires the user's Firebase session.
+- [x] Add per-viewer removal to Withdrawal Requests without deleting payment data; verify tests and preview.- [x] Members page: show password button and set new password button.
+- [x] Restore Fly logo image.
+- [ ] Tighten Firebase rules (passwords stored as plain text) — needs user's Firebase console.
