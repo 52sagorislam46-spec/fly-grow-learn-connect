@@ -461,16 +461,43 @@ export function ProfilePage({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowMenu(false)}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-left hover:bg-gray-50"
+              >
+                <Avatar src={myProfile?.photoURL} alt={myProfile?.displayName ?? ""} size={48} />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold text-gray-900 truncate">
+                    {myProfile?.displayName}
+                  </span>
+                  <span className="block text-xs text-gray-500">View your profile</span>
+                </span>
+              </button>
+
+              <p className="px-1 pt-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">Shortcuts</p>
               <div className="grid grid-cols-2 gap-2">
                 <LiveButton variant="tile" />
                 <MenuTile
-                  icon={Wallet}
-                  gradient="from-amber-400 to-orange-500"
-                  label="My Wallet"
+                  icon={Bot}
+                  gradient="from-sky-400 to-blue-600"
+                  label="Fly AI"
                   onClick={() => {
                     setShowMenu(false);
-                    setShowWallet(true);
+                    setShowAI(true);
                   }}
+                />
+                <MenuTile
+                  icon={Swords}
+                  gradient="from-indigo-400 to-violet-600"
+                  label="Fly Arena"
+                  href="/study"
+                />
+                <MenuTile
+                  icon={Sprout}
+                  gradient="from-green-400 to-emerald-600"
+                  label="Fly Agro"
+                  href="/agro"
                 />
                 <MenuTile
                   icon={BadgeCheck}
@@ -482,67 +509,38 @@ export function ProfilePage({
                   }}
                 />
                 <MenuTile
-                  icon={Bot}
-                  gradient="from-sky-400 to-blue-600"
-                  label="Fly AI"
+                  icon={Wallet}
+                  gradient="from-amber-400 to-orange-500"
+                  label="My Wallet"
                   onClick={() => {
                     setShowMenu(false);
-                    setShowAI(true);
+                    setShowWallet(true);
                   }}
                 />
-                <MenuTile
-                  icon={LifeBuoy}
-                  gradient="from-cyan-400 to-sky-600"
-                  label="Help Center"
-                  onClick={() => {
-                    setShowMenu(false);
-                    setShowHelp(true);
-                  }}
-                />
-                <MenuTile
-                  icon={Sprout}
-                  gradient="from-green-400 to-emerald-600"
-                  label="Fly Agro"
-                  href="/agro"
-                />
-                <MenuTile
+              </div>
+
+              <div className="space-y-2">
+                <p className="px-1 pt-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Settings & preferences</p>
+                <MenuRow
                   icon={Settings}
                   gradient="from-slate-400 to-gray-600"
-                  label="Edit profile"
                   onClick={() => {
                     setShowMenu(false);
                     setShowEditPage(true);
                   }}
-                />
-                <MenuTile
+                >
+                  <span className="text-sm font-medium flex-1">Edit profile</span>
+                </MenuRow>
+                <MenuRow
                   icon={Bell}
                   gradient="from-pink-400 to-rose-600"
-                  label="Notification settings"
                   onClick={() => {
                     setShowMenu(false);
                     setShowNotifySettings(true);
                   }}
-                />
-              </div>
-              <div className="space-y-2">
-                <MenuRow
-                  icon={GraduationCap}
-                  gradient="from-indigo-400 to-violet-600"
-                  onClick={() => setShowSettingsMenu((v) => !v)}
                 >
-                  <span className="text-sm font-medium flex-1">Settings</span>
+                  <span className="text-sm font-medium flex-1">Notifications</span>
                 </MenuRow>
-                {showSettingsMenu && (
-                  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-                    <a
-                      href="/study"
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-800 hover:bg-gray-50"
-                    >
-                      <Swords size={18} className="text-gray-500" />
-                      <span className="text-sm font-medium">Fly Arena</span>
-                    </a>
-                  </div>
-                )}
                 <MenuRow
                   icon={Globe}
                   gradient="from-teal-400 to-cyan-600"
