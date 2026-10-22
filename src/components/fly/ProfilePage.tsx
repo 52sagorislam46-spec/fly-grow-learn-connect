@@ -466,7 +466,7 @@ export function ProfilePage({
                 onClick={() => setShowMenu(false)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-left hover:bg-gray-50"
               >
-                <Avatar src={myProfile?.photoURL} alt={myProfile?.displayName ?? ""} size={48} />
+                <Avatar src={myProfile?.photoURL ?? ""} alt={myProfile?.displayName ?? ""} size={48} />
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold text-gray-900 truncate">
                     {myProfile?.displayName}
