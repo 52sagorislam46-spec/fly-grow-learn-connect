@@ -199,8 +199,16 @@ function Reel({
       { threshold: [0, 0.6, 1] },
     );
     observer.observe(el);
+    // Resume this reel after a full-screen ad closes, if it's on screen.
+    const onAdClosed = () => {
+      const r = el.getBoundingClientRect();
+      const visible = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+      if (r.height > 0 && visible / r.height > 0.6) el.play().catch(() => {});
+    };
+    window.addEventListener("fly-ad-closed", onAdClosed);
     return () => {
       observer.disconnect();
+      window.removeEventListener("fly-ad-closed", onAdClosed);
       flushWatch();
     };
   }, [post.id]);

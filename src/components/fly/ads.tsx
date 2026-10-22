@@ -141,6 +141,11 @@ export function InterstitialHost() {
     const t = setTimeout(() => setLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [open, left]);
+  const close = () => {
+    setOpen(false);
+    // Let the reel that was on screen continue playing.
+    window.dispatchEvent(new Event("fly-ad-closed"));
+  };
   if (!open || premium) return null;
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 text-white">
@@ -148,12 +153,12 @@ export function InterstitialHost() {
       <button
         type="button"
         disabled={left > 0}
-        onClick={() => setOpen(false)}
+        onClick={close}
         className="absolute bottom-8 right-4 z-10 flex items-center gap-1 rounded-full bg-white/25 px-4 py-2 text-sm font-semibold"
       >
         {left > 0 ? `স্কিপ ${left}s` : (<>স্কিপ <X size={16} /></>)}
       </button>
-      <AdVideo onEnded={() => setOpen(false)} />
+      <AdVideo onEnded={close} />
     </div>
   );
 }
