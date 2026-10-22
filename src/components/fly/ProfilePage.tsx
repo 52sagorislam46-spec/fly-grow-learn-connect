@@ -594,8 +594,20 @@ export function ProfilePage({
                     />
                   </span>
                 </MenuRow>
+                <p className="px-1 pt-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Help & support</p>
+                <MenuRow
+                  icon={LifeBuoy}
+                  gradient="from-cyan-400 to-sky-600"
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowHelp(true);
+                  }}
+                >
+                  <span className="text-sm font-medium flex-1">Help Center</span>
+                </MenuRow>
                 {isAdmin(myProfile, user?.email) && (
                   <>
+                    <p className="px-1 pt-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Admin tools</p>
                     <MenuRow
                       icon={Wallet}
                       gradient="from-amber-400 to-orange-500"
