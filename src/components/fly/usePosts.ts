@@ -85,6 +85,8 @@ export function usePosts(pageSize = 40) {
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const loadingMoreRef = useRef(false);
+  // Ids from the live-listened first page, used to detect deletions.
+  const windowIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const q = query(
