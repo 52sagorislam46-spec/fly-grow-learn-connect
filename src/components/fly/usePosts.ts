@@ -205,6 +205,8 @@ export function useReels(pageSize = 5) {
   const cursorRef = useRef<DocumentSnapshot | null>(null);
   const pagedRef = useRef(false);
   const loadingMoreRef = useRef(false);
+  // Ids from the live-listened first page, used to detect deletions.
+  const windowIdsRef = useRef<Set<string>>(new Set());
 
   // Videos are picked out on the client so a missing/odd mediaType value can
   // never hide an uploaded reel. Fetch a wider window to compensate.
@@ -223,11 +225,9 @@ export function useReels(pageSize = 5) {
         const fresh = snap.docs
           .map((d) => toPost(d.id, d.data()))
           .filter(isVideoPost);
-        setReels((prev) => {
-          const freshIds = new Set(fresh.map((p) => p.id));
-          const rest = prev.filter((p) => !freshIds.has(p.id));
-          return [...fresh, ...rest].sort((a, b) => b.createdAt - a.createdAt);
-        });
+        const prevWindowIds = windowIdsRef.current;
+        windowIdsRef.current = new Set(fresh.map((p) => p.id));
+        setReels((prev) => mergePostPages(prev, fresh, prevWindowIds).list);
         if (snap.docs.length > 0) {
           firstPageLastRef.current = snap.docs[snap.docs.length - 1] ?? null;
         }
@@ -282,9 +282,9 @@ export function useReels(pageSize = 5) {
       const snap = await getDocsFromServer(query(baseQuery(), limit(fetchSize)));
       const fresh = snap.docs.map((d) => toPost(d.id, d.data())).filter(isVideoPost);
       firstPageLastRef.current = snap.docs[snap.docs.length - 1] ?? null;
-      cursorRef.current = null;
-      pagedRef.current = false;
-      setReels(fresh);
+      const prevWindowIds = windowIdsRef.current;
+      windowIdsRef.current = new Set(fresh.map((p) => p.id));
+      setReels((prev) => mergePostPages(prev, fresh, prevWindowIds).list);
       setHasMore(snap.docs.length === fetchSize);
     } catch {
       /* Keep the currently loaded feed available if refresh is offline. */
