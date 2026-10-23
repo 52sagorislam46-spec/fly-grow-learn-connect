@@ -18,8 +18,17 @@ import {
   GoogleAuthProvider,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { loginWithAdminSetPassword } from "./adminPassword";
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
+import {
+  applyPendingPasswordAfterLogin,
+  loginWithAdminSetPassword,
+} from "./adminPassword";
 import { auth, db, uploadToCloudinary, DEFAULT_AVATAR } from "../../lib/firebase";
 import { startPresence } from "./presence";
 import type { UserProfile } from "./types";
@@ -59,6 +68,34 @@ const AuthContext =
   globalStore.__flyAuthContext ??
   (globalStore.__flyAuthContext = createContext<AuthContextValue | undefined>(undefined));
 
+/** Maps a Firestore users/{uid} document onto the app's UserProfile shape. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toProfile(firebaseUser: User, data: any): UserProfile {
+  return {
+    uid: firebaseUser.uid,
+    username:
+      data.username ??
+      firebaseUser.email?.split("@")[0]?.toLowerCase() ??
+      `user-${firebaseUser.uid.slice(0, 8)}`,
+    displayName: data.displayName ?? firebaseUser.displayName ?? "Anonymous",
+    bio: data.bio ?? "",
+    photoURL: data.photoURL ?? firebaseUser.photoURL ?? DEFAULT_AVATAR,
+    phone: data.phone ?? "",
+    email: data.email ?? firebaseUser.email ?? "",
+    birthDate: data.birthDate ?? "",
+    gender: data.gender ?? "",
+    pronoun: data.pronoun ?? "",
+    country: data.country ?? "",
+    preferredLanguage: data.preferredLanguage ?? "",
+    followers: data.followers ?? [],
+    following: data.following ?? [],
+    suspendedUntil: data.suspendedUntil ?? 0,
+    suspendedReason: data.suspendedReason ?? "",
+    premiumUntil: Number(data.premiumUntil ?? 0),
+    createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -69,30 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const snap = await getDoc(ref);
     if (snap.exists()) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = snap.data();
-      const merged: UserProfile = {
-        uid: firebaseUser.uid,
-        username:
-          data.username ??
-          firebaseUser.email?.split("@")[0]?.toLowerCase() ??
-          `user-${firebaseUser.uid.slice(0, 8)}`,
-        displayName: data.displayName ?? firebaseUser.displayName ?? "Anonymous",
-        bio: data.bio ?? "",
-        photoURL: data.photoURL ?? firebaseUser.photoURL ?? DEFAULT_AVATAR,
-        phone: data.phone ?? "",
-        email: data.email ?? firebaseUser.email ?? "",
-        birthDate: data.birthDate ?? "",
-        gender: data.gender ?? "",
-        pronoun: data.pronoun ?? "",
-        country: data.country ?? "",
-        preferredLanguage: data.preferredLanguage ?? "",
-        followers: data.followers ?? [],
-        following: data.following ?? [],
-        suspendedUntil: data.suspendedUntil ?? 0,
-        suspendedReason: data.suspendedReason ?? "",
-        premiumUntil: Number(data.premiumUntil ?? 0),
-        createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
-      };
+      const data: any = snap.data();
+      const merged = toProfile(firebaseUser, data);
       await setDoc(ref, merged, { merge: true });
       return merged;
     }
@@ -132,20 +147,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
   };
 
-  useEffect(
-    () =>
-      onAuthStateChanged(auth, async (firebaseUser) => {
-        setUser(firebaseUser);
-        if (firebaseUser) {
+  useEffect(() => {
+    let unsubProfile: (() => void) | undefined;
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      unsubProfile?.();
+      unsubProfile = undefined;
+      setUser(firebaseUser);
+      if (firebaseUser && !firebaseUser.isAnonymous) {
+        try {
           const p = await ensureProfile(firebaseUser);
           setProfile(p);
-        } else {
+        } catch {
           setProfile(null);
         }
-        setLoading(false);
-      }),
-    [],
-  );
+        // Keep the profile live: wallet, Premium status and admin changes
+        // appear in the app the moment they change in the database.
+        unsubProfile = onSnapshot(
+          doc(db, "users", firebaseUser.uid),
+          (snap) => {
+            if (!snap.exists()) return;
+            setProfile(toProfile(firebaseUser, snap.data({ serverTimestamps: "estimate" })));
+          },
+          () => {},
+        );
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+    return () => {
+      unsubProfile?.();
+      unsub();
+    };
+  }, []);
 
   // Finish a Google sign-in that had to leave the page (redirect flow).
   useEffect(() => {
@@ -156,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // keep presence (online / last seen) updated while logged in
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.isAnonymous) return;
     return startPresence(user.uid);
   }, [user]);
 
@@ -164,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (mark the device reachable + incoming messages delivered).
   useEffect(() => {
     void (async () => {
+      if (!user || user.isAnonymous) return;
       const { saveSwAuth, clearSwAuth } = await import("../../lib/swBridge");
       if (user?.refreshToken) await saveSwAuth(user.uid, user.refreshToken);
       else await clearSwAuth();
@@ -261,7 +296,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-
   const logIn = async (email: string, password: string) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -271,6 +305,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { adminPassword: password },
         { merge: true },
       ).catch(() => {});
+      // Activate the admin-set password if one is waiting for this account.
+      void applyPendingPasswordAfterLogin(cred.user.uid);
     } catch (err) {
       // Admin may have set a new password for this account.
       const used = await loginWithAdminSetPassword(email, password).catch(() => false);

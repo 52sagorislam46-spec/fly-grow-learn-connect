@@ -282,6 +282,8 @@ export function useReels(pageSize = 5) {
       const snap = await getDocsFromServer(query(baseQuery(), limit(fetchSize)));
       const fresh = snap.docs.map((d) => toPost(d.id, d.data())).filter(isVideoPost);
       firstPageLastRef.current = snap.docs[snap.docs.length - 1] ?? null;
+      cursorRef.current = null;
+      pagedRef.current = false;
       const prevWindowIds = windowIdsRef.current;
       windowIdsRef.current = new Set(fresh.map((p) => p.id));
       setReels((prev) => mergePostPages(prev, fresh, prevWindowIds).list);
