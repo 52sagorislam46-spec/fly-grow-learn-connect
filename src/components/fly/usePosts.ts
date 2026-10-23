@@ -55,6 +55,28 @@ function toPost(id: string, data: any): Post {
 // Hide leftover demo/test posts (e.g. "Judge Bot" checks) from the feed.
 const isDemoPost = (p: Post) => /^judge\b/i.test(p.authorName) || /^JUDGE-/.test(p.text);
 
+/**
+ * Merges the live first page with previously loaded older pages and drops any
+ * post that disappeared from the watched window — so a deleted post vanishes
+ * immediately from the feed, reels and profile grids, no refresh needed.
+ */
+export function mergePostPages<T extends { id: string; createdAt: number }>(
+  previous: T[],
+  fresh: T[],
+  prevWindowIds: ReadonlySet<string>,
+): { list: T[]; windowIds: Set<string> } {
+  const freshIds = new Set(fresh.map((p) => p.id));
+  const removed = new Set<string>();
+  prevWindowIds.forEach((id) => {
+    if (!freshIds.has(id)) removed.add(id);
+  });
+  const list = [
+    ...fresh,
+    ...previous.filter((p) => !freshIds.has(p.id) && !removed.has(p.id)),
+  ].sort((a, b) => b.createdAt - a.createdAt);
+  return { list, windowIds: freshIds };
+}
+
 export function usePosts(pageSize = 40) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
