@@ -99,12 +99,9 @@ export function usePosts(pageSize = 40) {
       (snap) => {
         const fresh = snap.docs.map((d) => toPost(d.id, d.data()));
         lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null;
-        setPosts((previous) => {
-          const freshIds = new Set(fresh.map((post) => post.id));
-          return [...fresh, ...previous.filter((post) => !freshIds.has(post.id))].sort(
-            (a, b) => b.createdAt - a.createdAt,
-          );
-        });
+        const prevWindowIds = windowIdsRef.current;
+        windowIdsRef.current = new Set(fresh.map((post) => post.id));
+        setPosts((previous) => mergePostPages(previous, fresh, prevWindowIds).list);
         setHasMore(snap.docs.length === pageSize);
         setLoading(false);
       },
