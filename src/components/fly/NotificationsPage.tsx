@@ -1,4 +1,5 @@
-import { ArrowLeft, CheckCheck, Bell } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, CheckCheck, Bell, X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { useAuth } from "./AuthContext";
 import {
@@ -6,6 +7,7 @@ import {
   markNotificationRead,
   notificationLabel,
   useAppNotifications,
+  type AppNotification,
 } from "../../lib/appNotifications";
 
 
@@ -27,6 +29,7 @@ export function NotificationsPage({
 }) {
   const { user } = useAuth();
   const { items } = useAppNotifications(user?.uid);
+  const [open, setOpen] = useState<AppNotification | null>(null);
 
   return (
     <div className="pb-20">
@@ -59,8 +62,8 @@ export function NotificationsPage({
               <li key={n.id}>
                 <button
                   onClick={() => {
-                    if (user) void markNotificationRead(n.id, user.uid);
-                    onOpenProfile(n.actorId);
+                    if (user && unread) void markNotificationRead(n.id, user.uid);
+                    setOpen(n);
                   }}
                   className={`w-full flex items-start gap-3 px-4 py-3 text-left ${
                     unread ? "bg-sky-50/70" : "bg-white"
@@ -110,6 +113,58 @@ export function NotificationsPage({
             );
           })}
         </ul>
+      )}
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          onClick={() => setOpen(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-t-2xl p-5 pb-8 max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <Avatar uid={open.actorId} src={open.actorPhoto} alt={open.actorName} size={48} />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900">{open.actorName}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(open.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setOpen(null)} aria-label="Close" className="text-gray-500">
+                <X size={22} />
+              </button>
+            </div>
+            <p className="mt-4 text-[15px] text-gray-700">{notificationLabel(open)}</p>
+            {open.text && (
+              <p className="mt-2 text-base text-gray-900 whitespace-pre-wrap break-words">
+                {open.text}
+              </p>
+            )}
+            {open.mediaUrl && (
+              <img src={open.mediaUrl} alt="" className="mt-4 w-full rounded-xl object-cover" />
+            )}
+            {open.actorId !== "fly-admin" && (
+              <button
+                onClick={() => {
+                  const id = open.actorId;
+                  setOpen(null);
+                  onOpenProfile(id);
+                }}
+                className="mt-5 w-full h-11 rounded-xl bg-sky-500 text-white font-semibold"
+              >
+                প্রোফাইল দেখুন
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(null)}
+              className="mt-3 w-full h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold"
+            >
+              বন্ধ করুন
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
