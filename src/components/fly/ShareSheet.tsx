@@ -597,28 +597,7 @@ export function ImageLightbox({
         />
       </div>
 
-      {/* Zoom controls */}
-      <div className="flex items-center justify-center gap-3 p-3 shrink-0">
-        <button
-          onClick={() => zoomBy(1 / 1.4)}
-          disabled={zoom <= ZOOM_MIN}
-          className="h-10 w-10 rounded-full bg-white/10 text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
-          aria-label="জুম আউট"
-        >
-          <Minus size={18} />
-        </button>
-        <span className="text-white/80 text-xs font-medium w-12 text-center">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          onClick={() => zoomBy(1.4)}
-          disabled={zoom >= ZOOM_MAX}
-          className="h-10 w-10 rounded-full bg-white/10 text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
-          aria-label="জুম ইন"
-        >
-          <Plus size={18} />
-        </button>
-      </div>
+      {/* Zoom buttons hidden — pinch with two fingers / double-tap to zoom. */}
 
       {menuOpen && (
         <div className="fixed inset-0 z-[85] flex flex-col justify-end">
