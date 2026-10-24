@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, increment, setDoc } from "firebase/firestore";
-import { Gift, Loader2, Megaphone, X } from "lucide-react";
+import { Gift, Loader2, Megaphone, Volume2, X } from "lucide-react";
 import { db } from "../../lib/firebase";
 import adVideo from "../../assets/fly-ad-49s.mp4.asset.json";
 
@@ -95,15 +95,48 @@ export function onReelSeen() {
 
 /** Full-screen video ad creative (your uploaded ad video). */
 function AdVideo({ onEnded }: { onEnded?: () => void }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = false;
+    v.play().catch(() => {
+      // Mobile autoplay policy: retry muted so the video always shows.
+      v.muted = true;
+      setMuted(true);
+      v.play().catch(() => {});
+    });
+  }, []);
   return (
-    <video
-      src={adVideo.url}
-      autoPlay
-      playsInline
-      loop={!onEnded}
-      onEnded={onEnded}
-      className="max-h-full max-w-full object-contain"
-    />
+    <>
+      <video
+        ref={ref}
+        src={adVideo.url}
+        autoPlay
+        playsInline
+        preload="auto"
+        muted={muted}
+        loop={!onEnded}
+        onEnded={onEnded}
+        className="max-h-full max-w-full object-contain"
+      />
+      {muted && (
+        <button
+          type="button"
+          onClick={() => {
+            const v = ref.current;
+            if (!v) return;
+            v.muted = false;
+            setMuted(false);
+            v.play().catch(() => {});
+          }}
+          className="absolute top-4 right-4 z-10 flex items-center gap-1 rounded-full bg-white/25 px-3 py-1.5 text-xs font-semibold"
+        >
+          <Volume2 size={14} /> শব্দ চালু করুন
+        </button>
+      )}
+    </>
   );
 }
 
@@ -188,6 +221,10 @@ export function RewardedAdCard({ uid }: { uid: string }) {
       setWatching(false);
       recordShown("rewarded");
       setRemaining(rewardedLeftToday());
+      if (!REWARDED_STARS_ENABLED) {
+        setMsg("বিজ্ঞাপন দেখার জন্য ধন্যবাদ!");
+        return;
+      }
       setDoc(doc(db, "users", uid), { stars: increment(AD_CONFIG.rewardStars) }, { merge: true })
         .then(() => setMsg(`🎉 ${AD_CONFIG.rewardStars} স্টার যোগ হয়েছে!`))
         .catch(() => setMsg("স্টার যোগ করা যায়নি, আবার চেষ্টা করুন।"));
