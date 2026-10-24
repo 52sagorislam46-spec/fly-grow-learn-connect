@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  Crown,
   KeyRound,
   Loader2,
   Mail,
@@ -16,7 +17,7 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { Avatar } from "./Avatar";
@@ -187,6 +188,23 @@ export function MembersPage({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const grantPremium = async (m: UserProfile, days: number) => {
+    setMenuUid(null);
+    setError("");
+    setNotice("");
+    setBusyUid(m.uid);
+    try {
+      await updateDoc(doc(db, "users", m.uid), {
+        premiumUntil: days > 0 ? Date.now() + days * 86400000 : 0,
+      });
+      setNotice(days > 0 ? `Premium on for ${m.displayName} (${days} days).` : `Premium off for ${m.displayName}.`);
+    } catch {
+      setError("Could not change Premium.");
+    } finally {
+      setBusyUid(null);
+    }
+  };
+
   return (
     <div className="pb-20 min-h-screen bg-white">
       <header className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-4 h-14 flex items-center gap-3 z-10">
@@ -311,6 +329,21 @@ export function MembersPage({ onBack }: { onBack: () => void }) {
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-violet-600 border-t border-gray-100 hover:bg-violet-50"
                       >
                         <KeyRound size={14} /> Set new password
+                      </button>
+                      {[30, 365].map((days) => (
+                        <button
+                          key={days}
+                          onClick={() => void grantPremium(m, days)}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-amber-600 border-t border-gray-100 hover:bg-amber-50"
+                        >
+                          <Crown size={14} /> Premium on ({days} days)
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => void grantPremium(m, 0)}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 border-t border-gray-100 hover:bg-gray-50"
+                      >
+                        <Crown size={14} /> Premium off
                       </button>
                       <button
 
